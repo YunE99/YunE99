@@ -133,7 +133,7 @@ class FaceAnalyzer(
 
                     // [수정] 바운딩박스 높이 기반 EAR 보정
                     val adjustedEAR = avgEAR / faceBoxHeight
-                    val isClosed = (adjustedEAR < 0.0022)
+                    val isClosed = (adjustedEAR < 0.0018) //250414 1044
 
                     val upperLip = face.getContour(FaceContour.UPPER_LIP_TOP)?.points
                     val lowerLip = face.getContour(FaceContour.LOWER_LIP_BOTTOM)?.points
