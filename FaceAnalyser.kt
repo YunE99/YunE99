@@ -111,7 +111,7 @@ class FaceAnalyzer(
                         kotlin.math.sqrt(dx * dx + dy * dy) > radius
                     }
 
-                    val faceBoxHeight = face.boundingBox.height().toDouble()  // [수정] faceBoxHeight만 사용
+                    val faceBoxHeight = face.boundingBox.height().toDouble()
                     val mouthThreshold = 0.70
                     val minFaceBoxHeight = 170.0
 
@@ -131,9 +131,7 @@ class FaceAnalyzer(
                     val rightEAR = computeEAR(rightEye)
                     val avgEAR = (leftEAR + rightEAR) / 2.0
 
-                    // [수정] 바운딩박스 높이 기반 EAR 보정
-                    val adjustedEAR = avgEAR / faceBoxHeight
-                    val isClosed = (adjustedEAR < 0.0013)
+                    val isClosed = (avgEAR < 0.23) // [수정] adjustedEAR 제거, avgEAR 기준
 
                     val upperLip = face.getContour(FaceContour.UPPER_LIP_TOP)?.points
                     val lowerLip = face.getContour(FaceContour.LOWER_LIP_BOTTOM)?.points
@@ -142,14 +140,15 @@ class FaceAnalyzer(
                     val isYawning = (!isClosed && mouthOpenRatio > mouthThreshold)
 
                     statusView.post {
+                        // [수정] avgEAR 출력 추가
                         statusView.text = when {
-                            isYawning -> "하품\n(adjustedEAR: %.4f)".format(adjustedEAR)
-                            isClosed -> "눈 감김\n(adjustedEAR: %.4f)".format(adjustedEAR)
-                            else -> "눈 뜸\n(adjustedEAR: %.4f)".format(adjustedEAR)
+                            isYawning -> "하품\n(avgEAR: %.4f)".format(avgEAR)
+                            isClosed -> "눈 감김\n(avgEAR: %.4f)".format(avgEAR)
+                            else -> "눈 뜸\n(avgEAR: %.4f)".format(avgEAR)
                         }
                     }
 
-                    Log.d("FaceAnalyzer", "adjustedEAR=$adjustedEAR, avgEAR=$avgEAR, faceBoxHeight=$faceBoxHeight")
+                    Log.d("FaceAnalyzer", "avgEAR=$avgEAR, mouthOpenRatio=$mouthOpenRatio") // [수정] 로그 변경
                 } else {
                     statusView.post { statusView.text = "범위 밖" }
                 }
@@ -203,5 +202,4 @@ class FaceAnalyzer(
         return hypot(p1.x - p2.x, p1.y - p2.y)
     }
 
-    // [삭제됨] computeFaceLengthByIndex() 함수는 더 이상 사용되지 않으므로 제거하였습니다.
 }
