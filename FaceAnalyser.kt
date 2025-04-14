@@ -10,6 +10,7 @@ import androidx.camera.view.PreviewView
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.face.*
 import kotlin.math.hypot
+import kotlin.math.sqrt
 
 class FaceAnalyzer(
     private val statusView: TextView,
@@ -108,7 +109,7 @@ class FaceAnalyzer(
                     val isOutside = transformedPoints.any {
                         val dx = it.x - center.x
                         val dy = it.y - center.y
-                        kotlin.math.sqrt(dx * dx + dy * dy) > radius
+                        sqrt(dx * dx + dy * dy) > radius
                     }
 
                     val faceBoxHeight = face.boundingBox.height().toDouble()
@@ -131,7 +132,14 @@ class FaceAnalyzer(
                     val rightEAR = computeEAR(rightEye)
                     val avgEAR = (leftEAR + rightEAR) / 2.0
 
-                    val isClosed = (avgEAR < 0.23) // [수정] adjustedEAR 제거, avgEAR 기준
+                    // [수정] 화면 내 얼굴 비율 기반 EAR 기준 보정
+                    val viewHeight = previewView.height.toDouble()
+                    val faceRatio = faceBoxHeight / viewHeight
+                    val baseThreshold = 0.18
+                    val scaleFactor = 0.2
+                    val earThreshold = baseThreshold - (faceRatio * scaleFactor)
+
+                    val isClosed = avgEAR < earThreshold // [수정 적용 완료]
 
                     val upperLip = face.getContour(FaceContour.UPPER_LIP_TOP)?.points
                     val lowerLip = face.getContour(FaceContour.LOWER_LIP_BOTTOM)?.points
@@ -140,7 +148,6 @@ class FaceAnalyzer(
                     val isYawning = (!isClosed && mouthOpenRatio > mouthThreshold)
 
                     statusView.post {
-                        // [수정] avgEAR 출력 추가
                         statusView.text = when {
                             isYawning -> "하품\n(avgEAR: %.4f)".format(avgEAR)
                             isClosed -> "눈 감김\n(avgEAR: %.4f)".format(avgEAR)
@@ -148,7 +155,7 @@ class FaceAnalyzer(
                         }
                     }
 
-                    Log.d("FaceAnalyzer", "avgEAR=$avgEAR, mouthOpenRatio=$mouthOpenRatio") // [수정] 로그 변경
+                    Log.d("FaceAnalyzer", "avgEAR=$avgEAR, mouthOpenRatio=$mouthOpenRatio, faceRatio=$faceRatio, earThreshold=$earThreshold") // [로그 추가]
                 } else {
                     statusView.post { statusView.text = "범위 밖" }
                 }
