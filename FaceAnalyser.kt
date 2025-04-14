@@ -21,10 +21,32 @@ class FaceAnalyzer(
     private val offsetX = -1f
     private val offsetY = +10f
 
-    private var baselineEAR = 0.0
-    private var earSum = 0.0
-    private var earCount = 0
-    private var isBaselineReady = false
+    private val earWindow = mutableListOf<Double>()
+    private val earWindowSize = 5
+
+    private val bboxWindow = mutableListOf<Double>()
+    private val bboxWindowSize = 5
+
+    private val thresholdWindow = mutableListOf<Double>()
+    private val thresholdWindowSize = 5
+
+    private fun getSmoothedEAR(newEar: Double): Double {
+        earWindow.add(newEar)
+        if (earWindow.size > earWindowSize) earWindow.removeAt(0)
+        return earWindow.average()
+    }
+
+    private fun getSmoothedBoundingBoxHeight(newHeight: Double): Double {
+        bboxWindow.add(newHeight)
+        if (bboxWindow.size > bboxWindowSize) bboxWindow.removeAt(0)
+        return bboxWindow.average()
+    }
+
+    private fun getSmoothedThreshold(newThreshold: Double): Double {
+        thresholdWindow.add(newThreshold)
+        if (thresholdWindow.size > thresholdWindowSize) thresholdWindow.removeAt(0)
+        return thresholdWindow.average()
+    }
 
     fun translateToViewCoordinates(
         point: PointF,
@@ -117,7 +139,8 @@ class FaceAnalyzer(
                         sqrt(dx * dx + dy * dy) > radius
                     }
 
-                    val faceBoxHeight = face.boundingBox.height().toDouble()
+                    val faceBoxHeightRaw = face.boundingBox.height().toDouble()
+                    val faceBoxHeight = getSmoothedBoundingBoxHeight(faceBoxHeightRaw)
                     val mouthThreshold = 0.70
                     val minFaceBoxHeight = 170.0
 
@@ -135,39 +158,31 @@ class FaceAnalyzer(
                     val rightEye = face.getContour(FaceContour.RIGHT_EYE)?.points
                     val leftEAR = computeEAR(leftEye)
                     val rightEAR = computeEAR(rightEye)
-                    val avgEAR = (leftEAR + rightEAR) / 2.0
+                    val rawEAR = (leftEAR + rightEAR) / 2.0
 
-                    // [수정] baseline EAR 방식 적용
-                    if (!isBaselineReady) {
-                        earSum += avgEAR
-                        earCount++
-                        if (earCount >= 30) {
-                            baselineEAR = earSum / earCount
-                            isBaselineReady = true
-                        }
-                        statusView.post { statusView.text = "기준 측정 중... (${earCount}/30)" }
-                        imageProxy.close()
-                        return@addOnSuccessListener
-                    }
+                    val avgEAR = getSmoothedEAR(rawEAR)
 
-                    val ratio = avgEAR / baselineEAR
-                    val isClosed = ratio < 0.7
+                    val openEarThresholdRaw = 0.000001 * faceBoxHeight * faceBoxHeight +
+                            0.000191 * faceBoxHeight +
+                            0.149889
+                    val openEarThreshold = getSmoothedThreshold(openEarThresholdRaw)
+                    val closedEarThreshold = openEarThreshold + 0.01
+                    val isClosed = avgEAR < closedEarThreshold
 
                     val upperLip = face.getContour(FaceContour.UPPER_LIP_TOP)?.points
                     val lowerLip = face.getContour(FaceContour.LOWER_LIP_BOTTOM)?.points
                     val mouthOpenRatio = computeMouthOpenRatio(upperLip, lowerLip)
-
                     val isYawning = (!isClosed && mouthOpenRatio > mouthThreshold)
 
                     statusView.post {
                         statusView.text = when {
-                            isYawning -> "하품\n(avgEAR: %.4f / 기준: %.4f)".format(avgEAR, baselineEAR)
-                            isClosed -> "눈 감김\n(avgEAR: %.4f / 기준: %.4f)".format(avgEAR, baselineEAR)
-                            else -> "눈 뜸\n(avgEAR: %.4f / 기준: %.4f)".format(avgEAR, baselineEAR)
+                            isYawning -> "하품\n(EAR / 기준 / 바운딩 \n %.2f / %.2f / %.0f)".format(avgEAR, closedEarThreshold, faceBoxHeight)
+                            isClosed -> "눈 감김\n(EAR / 기준 / 바운딩 \n %.2f / %.2f / %.0f)".format(avgEAR, closedEarThreshold, faceBoxHeight)
+                            else -> "눈 뜸\n(EAR / 기준 / 바운딩 \n %.2f / %.2f / %.0f)".format(avgEAR, closedEarThreshold, faceBoxHeight)
                         }
                     }
 
-                    Log.d("FaceAnalyzer", "avgEAR=$avgEAR, baselineEAR=$baselineEAR, ratio=$ratio, mouthOpenRatio=$mouthOpenRatio")
+                    Log.d("FaceAnalyzer", "avgEAR=$avgEAR, faceHeight=$faceBoxHeight, earThreshold=$closedEarThreshold, mouthOpenRatio=$mouthOpenRatio")
                 } else {
                     statusView.post { statusView.text = "범위 밖" }
                 }
@@ -183,9 +198,7 @@ class FaceAnalyzer(
     private fun computeEAR(points: List<PointF>?): Double {
         if (points == null || points.size < 16) return 1.0
 
-        val verticalPairs = listOf(
-            4 to 12
-        )
+        val verticalPairs = listOf(4 to 12)
 
         val verticalDistances = verticalPairs.map { (top, bottom) ->
             distance(points[top], points[bottom])
