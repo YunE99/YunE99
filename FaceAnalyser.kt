@@ -21,6 +21,11 @@ class FaceAnalyzer(
     private val offsetX = -1f
     private val offsetY = +10f
 
+    private var baselineEAR = 0.0
+    private var earSum = 0.0
+    private var earCount = 0
+    private var isBaselineReady = false
+
     fun translateToViewCoordinates(
         point: PointF,
         imageProxy: ImageProxy,
@@ -132,16 +137,21 @@ class FaceAnalyzer(
                     val rightEAR = computeEAR(rightEye)
                     val avgEAR = (leftEAR + rightEAR) / 2.0
 
-                    // [수정] EAR 기준값: 얼굴 박스 높이 기준 직접 분기
-                    val earThreshold = when {
-                        faceBoxHeight > 300 -> 0.22
-                        faceBoxHeight > 250 -> 0.20
-                        faceBoxHeight > 200 -> 0.18
-                        faceBoxHeight > 150 -> 0.16
-                        else -> 0.15
+                    // [수정] baseline EAR 방식 적용
+                    if (!isBaselineReady) {
+                        earSum += avgEAR
+                        earCount++
+                        if (earCount >= 30) {
+                            baselineEAR = earSum / earCount
+                            isBaselineReady = true
+                        }
+                        statusView.post { statusView.text = "기준 측정 중... (${earCount}/30)" }
+                        imageProxy.close()
+                        return@addOnSuccessListener
                     }
 
-                    val isClosed = avgEAR < earThreshold // [수정 적용 완료]
+                    val ratio = avgEAR / baselineEAR
+                    val isClosed = ratio < 0.7
 
                     val upperLip = face.getContour(FaceContour.UPPER_LIP_TOP)?.points
                     val lowerLip = face.getContour(FaceContour.LOWER_LIP_BOTTOM)?.points
@@ -151,13 +161,13 @@ class FaceAnalyzer(
 
                     statusView.post {
                         statusView.text = when {
-                            isYawning -> "하품\n(avgEAR: %.4f / 기준: %.4f)".format(avgEAR, earThreshold)
-                            isClosed -> "눈 감김\n(avgEAR: %.4f / 기준: %.4f)".format(avgEAR, earThreshold)
-                            else -> "눈 뜸\n(avgEAR: %.4f / 기준: %.4f)".format(avgEAR, earThreshold)
+                            isYawning -> "하품\n(avgEAR: %.4f / 기준: %.4f)".format(avgEAR, baselineEAR)
+                            isClosed -> "눈 감김\n(avgEAR: %.4f / 기준: %.4f)".format(avgEAR, baselineEAR)
+                            else -> "눈 뜸\n(avgEAR: %.4f / 기준: %.4f)".format(avgEAR, baselineEAR)
                         }
                     }
 
-                    Log.d("FaceAnalyzer", "avgEAR=$avgEAR, faceHeight=$faceBoxHeight, earThreshold=$earThreshold, mouthOpenRatio=$mouthOpenRatio")
+                    Log.d("FaceAnalyzer", "avgEAR=$avgEAR, baselineEAR=$baselineEAR, ratio=$ratio, mouthOpenRatio=$mouthOpenRatio")
                 } else {
                     statusView.post { statusView.text = "범위 밖" }
                 }
