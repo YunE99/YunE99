@@ -137,7 +137,9 @@ class FaceAnalyzer(
                     val faceRatio = faceBoxHeight / viewHeight
                     val baseThreshold = 0.18
                     val scaleFactor = 0.2
-                    val earThreshold = baseThreshold - (faceRatio * scaleFactor)
+                    val minThreshold = 0.12
+
+                    val earThreshold = maxOf(minThreshold, baseThreshold - (faceRatio * scaleFactor))
 
                     val isClosed = avgEAR < earThreshold // [수정 적용 완료]
 
