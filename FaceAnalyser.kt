@@ -132,14 +132,14 @@ class FaceAnalyzer(
                     val rightEAR = computeEAR(rightEye)
                     val avgEAR = (leftEAR + rightEAR) / 2.0
 
-                    // [수정] 화면 내 얼굴 비율 기반 EAR 기준 보정
-                    val viewHeight = previewView.height.toDouble()
-                    val faceRatio = faceBoxHeight / viewHeight
-                    val baseThreshold = 0.18
-                    val scaleFactor = 0.2
-                    val minThreshold = 0.12
-
-                    val earThreshold = maxOf(minThreshold, baseThreshold - (faceRatio * scaleFactor))
+                    // [수정] EAR 기준값: 얼굴 박스 높이 기준 직접 분기
+                    val earThreshold = when {
+                        faceBoxHeight > 300 -> 0.22
+                        faceBoxHeight > 250 -> 0.20
+                        faceBoxHeight > 200 -> 0.18
+                        faceBoxHeight > 150 -> 0.16
+                        else -> 0.15
+                    }
 
                     val isClosed = avgEAR < earThreshold // [수정 적용 완료]
 
@@ -157,7 +157,7 @@ class FaceAnalyzer(
                         }
                     }
 
-                    Log.d("FaceAnalyzer", "avgEAR=$avgEAR, mouthOpenRatio=$mouthOpenRatio, faceRatio=$faceRatio, earThreshold=$earThreshold") // [로그 추가]
+                    Log.d("FaceAnalyzer", "avgEAR=$avgEAR, faceHeight=$faceBoxHeight, earThreshold=$earThreshold, mouthOpenRatio=$mouthOpenRatio")
                 } else {
                     statusView.post { statusView.text = "범위 밖" }
                 }
@@ -174,13 +174,7 @@ class FaceAnalyzer(
         if (points == null || points.size < 16) return 1.0
 
         val verticalPairs = listOf(
-            1 to 15,
-            2 to 14,
-            3 to 13,
-            4 to 12,
-            5 to 11,
-            6 to 10,
-            7 to 9
+            4 to 12
         )
 
         val verticalDistances = verticalPairs.map { (top, bottom) ->
@@ -210,5 +204,4 @@ class FaceAnalyzer(
     private fun distance(p1: PointF, p2: PointF): Float {
         return hypot(p1.x - p2.x, p1.y - p2.y)
     }
-
 }
