@@ -149,9 +149,9 @@ class FaceAnalyzer(
 
                     statusView.post {
                         statusView.text = when {
-                            isYawning -> "하품\n(avgEAR: %.4f)".format(avgEAR)
-                            isClosed -> "눈 감김\n(avgEAR: %.4f)".format(avgEAR)
-                            else -> "눈 뜸\n(avgEAR: %.4f)".format(avgEAR)
+                            isYawning -> "하품\n(avgEAR: %.4f / 기준: %.4f)".format(avgEAR, earThreshold)
+                            isClosed -> "눈 감김\n(avgEAR: %.4f / 기준: %.4f)".format(avgEAR, earThreshold)
+                            else -> "눈 뜸\n(avgEAR: %.4f / 기준: %.4f)".format(avgEAR, earThreshold)
                         }
                     }
 
