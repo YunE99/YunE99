@@ -18,28 +18,31 @@ class FaceAnalyzer(
     private val previewView: PreviewView
 ) : ImageAnalysis.Analyzer {
 
+//  [EAR, bounding box, 시간 측정을 위한 상태 변수들]
+//  ◼ EAR
     private val earBuffer = mutableListOf<Double>()
-    private var lastEarDisplayTime = System.currentTimeMillis()
 
+//  ◼ Bounding obx
     private val bboxWindow = mutableListOf<Double>()
     private val bboxWindowSize = 5
-
+//  ◼ 범위 밖 카운트
     private var outOfRangeDurationSec = 0
     private var lastOutOfRangeStart = 0L
-
-    private var yawnCount = 0
+//  ◼ 시간 및 카운트
     private var closedDurationSec = 0
     private var closedCount = 0
     private var lastClosedTime = 0L
-
+//  ◼ 상태
     private var lastState: String = ""
 
+//  [bounding box 높이 이동 평균 계산]
     private fun getSmoothedBoundingBoxHeight(newHeight: Double): Double {
         bboxWindow.add(newHeight)
         if (bboxWindow.size > bboxWindowSize) bboxWindow.removeAt(0)
         return bboxWindow.average()
     }
 
+//  [이미지 좌표를 PreviewView 기준 좌표로 변환]
     private fun translateToViewCoordinates(
         point: PointF,
         imageProxy: ImageProxy,
@@ -63,6 +66,7 @@ class FaceAnalyzer(
         return PointF(mappedX, mappedY)
     }
 
+//  [FaceMeshDetector 초기화]
     private val detector: FaceMeshDetector by lazy {
         val options = FaceMeshDetectorOptions.Builder()
             .setUseCase(FaceMeshDetectorOptions.FACE_MESH)
@@ -70,6 +74,8 @@ class FaceAnalyzer(
         FaceMeshDetection.getClient(options)
     }
 
+
+//  [실시간 프레임 분석 함수]
     @SuppressLint("UnsafeOptInUsageError")
     override fun analyze(imageProxy: ImageProxy) {
         val mediaImage = imageProxy.image ?: run {
@@ -82,18 +88,23 @@ class FaceAnalyzer(
         detector.process(inputImage)
             .addOnSuccessListener { meshes ->
                 if (meshes.isEmpty()) {
+                    // 얼굴 미감지 상태
                     if (lastState != "범위 밖") {
                         lastOutOfRangeStart = now
                         lastState = "범위 밖"
                     }
 
                     val duration = ((now - lastOutOfRangeStart) / 1000).toInt()
+//                    ㆍSystem.currentTimeMillis()는 현재 시각을 밀리초(1/1000초) 단위로 반환
+//                    ㆍ시간 차이를 초 단위로 보고 싶으므로 1000으로 나눔
+//                    ㆍ.toInt()는 소수점 제거 → 정수 초 단위로 표현
+
                     statusView.post {
                         statusView.text = "범위 밖 (감지 실패)\n경과: ${duration}초"
                     }
                     return@addOnSuccessListener
                 }
-
+                // 얼굴 다시 감지됨
                 if (lastState == "범위 밖" && lastOutOfRangeStart > 0) {
                     val duration = ((now - lastOutOfRangeStart) / 1000).toInt()
                     outOfRangeDurationSec += duration
@@ -112,6 +123,7 @@ class FaceAnalyzer(
 
                 overlayView.post { overlayView.setAllPoints(transformedPoints) }
 
+//              [bounding box 및 안내 원 기준 체크]
                 val faceBoxHeight = getSmoothedBoundingBoxHeight(mesh.boundingBox.height().toDouble())
                 val isOutside = transformedPoints.any {
                     val dx = it.x - overlayView.getGuideCenter().x
@@ -126,6 +138,7 @@ class FaceAnalyzer(
                     return@addOnSuccessListener
                 }
 
+//              [EAR 변수]
                 val leftEyePoints = getMeshPoints(mesh, listOf(33, 160, 158, 133, 153, 144))
                 val rightEyePoints = getMeshPoints(mesh, listOf(362, 385, 387, 263, 373, 380))
                 val leftEAR = computeEAR(leftEyePoints)
@@ -133,12 +146,33 @@ class FaceAnalyzer(
                 val ear = (leftEAR + rightEAR) / 2.0
                 earBuffer.add(ear)
 
-                val upperLip = getMeshPoints(mesh, listOf(13, 14, 15))
-                val lowerLip = getMeshPoints(mesh, listOf(17, 18, 87))
-                val mouthOpenRatio = computeMouthOpenRatio(upperLip, lowerLip)
+                // 얼굴크기, 양쪽눈 사이 거리 기반 EAR 정규화
+                val faceHeight = mesh.boundingBox.height().toFloat()
+                val eyeDistance = distance(leftEyePoints[0], rightEyePoints[3])
+                val earByFace = (ear / faceHeight) * 100.0
+                val earByEye = (ear / eyeDistance) * 100.0
+                val finalEAR = (earByFace + earByEye) / 2.0  // ← 여기서 최종 EAR 사용
 
-                val isClosed = ear < 0.1
-                val isYawning = !isClosed && mouthOpenRatio > 0.9
+//                var threshold = (eyeDistance / faceHeight) * 0.3 // 임계값 카메라 아래
+                var threshold = (eyeDistance / faceHeight) * 0.2 // 임계값 카메라 위
+
+                val diff = finalEAR - threshold
+
+                if (diff >= 0.35) {
+                    threshold += 0.3  // [sy - 차이가 0.3 초과 → threshold ↑]
+                } else if (diff >= 0.25) {
+                    threshold += 0.2  // [sy - 차이가 0.2 초과 → threshold ↑]
+                } else if (diff >= 0.15)
+                    threshold += 0.1
+
+//              [하품 변수]
+//                val upperLip = getMeshPoints(mesh, listOf(13, 14, 15))
+//                val lowerLip = getMeshPoints(mesh, listOf(17, 18, 87))
+//                val mouthOpenRatio = computeMouthOpenRatio(upperLip, lowerLip)
+
+//              [눈 감음 조건문]
+                val isClosed = finalEAR < threshold
+//                val isYawning = !isClosed && mouthOpenRatio > 0.9
 
                 val status = when {
                     isClosed -> "눈 감김"
@@ -157,9 +191,22 @@ class FaceAnalyzer(
                     lastState = status
                 }
 
-                statusView.post {
-                    statusView.text = "$status | EAR: %.3f\n$closedCount, ${closedDurationSec}s \n${outOfRangeDurationSec}s".format(ear)
+//              [상태 출력]
+                if (status == "눈 감김") {
+                    val duration = ((now - lastClosedTime) / 1000).toInt()
+
+                    val previewSec = closedDurationSec + if (duration >= 5) duration else 0
+                    val previewCount = closedCount + if (duration >= 5) 1 else 0
+
+                    statusView.post {
+                        statusView.text = "$status | EAR: %.2f\n th : %.2f \n ${previewCount}회 : ${previewSec}s\n${outOfRangeDurationSec}s".format(finalEAR, threshold)
+                    }
+                } else {
+                    statusView.post {
+                        statusView.text = "$status | EAR: %.2f\n th : %.2f \n ${closedCount}회 : ${closedDurationSec}s\n${outOfRangeDurationSec}s".format(finalEAR, threshold)
+                    }
                 }
+
 
                 imageProxy.close()
             }
@@ -171,6 +218,7 @@ class FaceAnalyzer(
             }
     }
 
+//  [포인트 인덱스를 기반으로 실제 PointF 리스트 추출]
     private fun getMeshPoints(mesh: FaceMesh, indexes: List<Int>): List<PointF> {
         return indexes.mapNotNull { idx ->
             val point = mesh.allPoints.getOrNull(idx)
@@ -179,6 +227,7 @@ class FaceAnalyzer(
         }
     }
 
+//  [EAR(Eye Aspect Ratio) 계산]
     private fun computeEAR(points: List<PointF>): Double {
         if (points.size < 6) return 1.0
         val vertical1 = distance(points[1], points[5])
@@ -188,17 +237,19 @@ class FaceAnalyzer(
         return if (horizontal != 0f) (verticalAvg / horizontal).toDouble() else 1.0
     }
 
-    private fun computeMouthOpenRatio(top: List<PointF>, bottom: List<PointF>): Double {
-        if (top.isEmpty() || bottom.isEmpty()) return 0.0
-        val topMid = top[top.size / 2]
-        val bottomMid = bottom[bottom.size / 2]
-        val left = top.first()
-        val right = top.last()
-        val vertical = distance(topMid, bottomMid)
-        val horizontal = distance(left, right)
-        return if (horizontal != 0f) (vertical / horizontal).toDouble() else 0.0
-    }
+//    [입 벌림 비율 계산 (하품)]
+//    private fun computeMouthOpenRatio(top: List<PointF>, bottom: List<PointF>): Double {
+//        if (top.isEmpty() || bottom.isEmpty()) return 0.0
+//        val topMid = top[top.size / 2]
+//        val bottomMid = bottom[bottom.size / 2]
+//        val left = top.first()
+//        val right = top.last()
+//        val vertical = distance(topMid, bottomMid)
+//        val horizontal = distance(left, right)
+//        return if (horizontal != 0f) (vertical / horizontal).toDouble() else 0.0
+//    }
 
+//  [두 점 사이 거리 계산]
     private fun distance(p1: PointF, p2: PointF): Float {
         return hypot(p1.x - p2.x, p1.y - p2.y)
     }
