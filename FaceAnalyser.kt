@@ -109,9 +109,10 @@ class FaceAnalyzer(
                     val duration2 = (elapsedMs / 1000).toInt()
 
                     if (elapsedMs >= 10000) {
-                        if (duration2 > outOfRangeAccumulated) {
-                            outOfRangeTotalTime += duration2 - outOfRangeAccumulated
-                            outOfRangeAccumulated = duration2
+                        val seconds = duration2
+                        if (seconds  > outOfRangeAccumulated) {
+                            outOfRangeTotalTime += seconds  - outOfRangeAccumulated
+                            outOfRangeAccumulated = seconds
                         }
                         if (!outOfRangeAlreadyCounted) {
                             outOfRangeCount++
@@ -130,10 +131,13 @@ class FaceAnalyzer(
                 // ✅ 얼굴 감지 복귀 → 이탈 종료 및 초기화
                 if (isOutOfRange) {
                     val elapsedMs = now - outOfRangeStart
-                    val seconds = (elapsedMs / 1000).toInt()
-                    if (seconds > outOfRangeAccumulated) {
-                        outOfRangeTotalTime += seconds - outOfRangeAccumulated
+                    if (elapsedMs >= 10000) {
+                        val seconds = (elapsedMs / 1000).toInt()
+                        if (seconds > outOfRangeAccumulated) {
+                            outOfRangeTotalTime += seconds - outOfRangeAccumulated
+                        }
                     }
+                    // 무조건 초기화는 유지
                     outOfRangeStart = 0L
                     isOutOfRange = false
                     outOfRangeAccumulated = 0
@@ -166,12 +170,10 @@ class FaceAnalyzer(
 
     private fun runFullAnalysis(inputImage: InputImage, meshes: List<FaceMesh>, now: Long, imageProxy: ImageProxy) {
         if (isOutOfRange) {
-            val elapsedMs = now - outOfRangeStart
-            if (elapsedMs >= 1000) {
-                outOfRangeTotalTime += (elapsedMs / 1000).toInt()
-            }
             outOfRangeStart = 0L
             isOutOfRange = false
+            outOfRangeAccumulated = 0
+            outOfRangeAlreadyCounted = false
         }
 
         val mesh = meshes[0]
@@ -347,8 +349,8 @@ class FaceAnalyzer(
 //                    append("상태: ${if (isClosed) "눈 감김" else "눈 뜸"}")
 //                    append(" | ${if (moved) "O" else "X"}\n")
                     append("졸음 | 자세 | 이탈 \n")
-                    append("${totalCount}회 | ${postureOutCount} 회|  ${outOfRangeCount}회\n")
-                    append("${totalTime/60}분 | ${postureOutTime/60}분 | ${outOfRangeTotalTime/60}분")
+                    append("${totalCount}회 | ${postureOutCount} 회 | ${outOfRangeCount}회\n")
+                    append("${totalTime}초 | ${postureOutTime}초 | ${outOfRangeTotalTime}초")
                 }
                 statusView.post { statusView.text = statusText }
                 imageProxy.close()
