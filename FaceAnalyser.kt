@@ -54,6 +54,18 @@ class FaceAnalyzer(
     private var lastLeftWrist: PointF? = null
     private var lastRightWrist: PointF? = null
 
+    // ◼ 자세 벗어남
+    private var postureOutStart = 0L
+    private var postureOutAccumulated = 0
+    private var postureOutTime = 0
+    private var postureOutCount = 0
+    private var postureAlreadyCounted = false
+
+    // ◼ 범위 이탈
+    private var outOfRangeAccumulated = 0
+    private var outOfRangeCount = 0
+    private var outOfRangeAlreadyCounted = false
+
     // ◼ 얼굴 랜드마크 감지기
     private val detector: FaceMeshDetector by lazy {
         val options = FaceMeshDetectorOptions.Builder()
@@ -81,15 +93,31 @@ class FaceAnalyzer(
 
         detector.process(inputImage)
             .addOnSuccessListener { meshes ->
+                val now = System.currentTimeMillis()
+
+                // ✅ 얼굴 감지 실패 상태 → 범위 이탈 처리
                 if (meshes.isEmpty()) {
                     if (!isOutOfRange) {
                         outOfRangeStart = now
                         isOutOfRange = true
-                        resetCounters()
                     }
+                    postureOutStart = 0L
+                    postureOutAccumulated = 0
+                    postureAlreadyCounted = false
 
                     val elapsedMs = now - outOfRangeStart
                     val duration2 = (elapsedMs / 1000).toInt()
+
+                    if (elapsedMs >= 10000) {
+                        if (duration2 > outOfRangeAccumulated) {
+                            outOfRangeTotalTime += duration2 - outOfRangeAccumulated
+                            outOfRangeAccumulated = duration2
+                        }
+                        if (!outOfRangeAlreadyCounted) {
+                            outOfRangeCount++
+                            outOfRangeAlreadyCounted = true
+                        }
+                    }
 
                     statusView.post {
                         statusView.text = "범위 밖 (감지 실패)\n경과: ${duration2}초"
@@ -98,6 +126,37 @@ class FaceAnalyzer(
                     imageProxy.close()
                     return@addOnSuccessListener
                 }
+
+                // ✅ 얼굴 감지 복귀 → 이탈 종료 및 초기화
+                if (isOutOfRange) {
+                    val elapsedMs = now - outOfRangeStart
+                    val seconds = (elapsedMs / 1000).toInt()
+                    if (seconds > outOfRangeAccumulated) {
+                        outOfRangeTotalTime += seconds - outOfRangeAccumulated
+                    }
+                    outOfRangeStart = 0L
+                    isOutOfRange = false
+                    outOfRangeAccumulated = 0
+                    outOfRangeAlreadyCounted = false
+                }
+
+//                if (meshes.isEmpty()) {
+//                    if (!isOutOfRange) {
+//                        outOfRangeStart = now
+//                        isOutOfRange = true
+//                        resetCounters()
+//                    }
+//
+//                    val elapsedMs = now - outOfRangeStart
+//                    val duration2 = (elapsedMs / 1000).toInt()
+//
+//                    statusView.post {
+//                        statusView.text = "범위 밖 (감지 실패)\n경과: ${duration2}초"
+//                    }
+//
+//                    imageProxy.close()
+//                    return@addOnSuccessListener
+//                }
                 runFullAnalysis(inputImage, meshes, now, imageProxy)
             }
             .addOnFailureListener {
@@ -127,11 +186,52 @@ class FaceAnalyzer(
             val dy = it.y - overlayView.getGuideCenter().y
             sqrt(dx * dx + dy * dy) > overlayView.getGuideRadius()
         }
-        if (faceBoxHeight < 170.0 || isOutside) {
-            statusView.post { statusView.text = "자세 벗어남" }
+        if (!isOutOfRange && (faceBoxHeight < 170.0 || isOutside)) {
+            eyeCloseStart = 0L
+            eyeCloseAccumulated = 0
+            alreadyCounted = false
+
+            noMoveStartTime = 0L
+            noMoveAccumulated = 0
+            moveAlreadyCounted = false
+
+            overlapStartTime = 0L
+            overlapActive = false
+
+            if (postureOutStart == 0L) postureOutStart = now
+            val elapsedMs = now - postureOutStart
+            val duration3 = (elapsedMs / 1000).toInt()
+
+            if (elapsedMs >= 10000) {
+                val seconds = duration3
+                if (seconds > postureOutAccumulated) {
+                    postureOutTime += seconds - postureOutAccumulated
+                    postureOutAccumulated = seconds
+                }
+                if (!postureAlreadyCounted) {
+                    postureOutCount++
+                    postureAlreadyCounted = true
+                }
+            }
+
+            statusView.post {
+                statusView.text = "자세 벗어남\n경과: ${duration3}초"
+            }
+
             imageProxy.close()
             return
+        } else {
+            postureOutStart = 0L
+            postureOutAccumulated = 0
+            postureAlreadyCounted = false
         }
+
+
+//        if (faceBoxHeight < 170.0 || isOutside) {
+//            statusView.post { statusView.text = "자세 벗어남" }
+//            imageProxy.close()
+//            return
+//        }
 
         poseDetector.process(inputImage)
             .addOnSuccessListener { pose ->
@@ -174,7 +274,7 @@ class FaceAnalyzer(
                 if (isClosed) {
                     if (eyeCloseStart == 0L) eyeCloseStart = now
                     val elapsedMs = now - eyeCloseStart
-                    if (elapsedMs >= 5000) {
+                    if (elapsedMs >= 10000) {
                         val seconds = (elapsedMs / 1000).toInt()
                         if (seconds > eyeCloseAccumulated) {
                             eyeDrowsyTime += seconds - eyeCloseAccumulated  // ✅ 누적 증가분만 더함
@@ -195,7 +295,7 @@ class FaceAnalyzer(
                 if (!moved) {
                     if (noMoveStartTime == 0L) noMoveStartTime = now
                     val elapsedMs = now - noMoveStartTime
-                    if (elapsedMs >= 5000) {
+                    if (elapsedMs >= 10000) {
                         val seconds = (elapsedMs / 1000).toInt()
                         if (seconds > noMoveAccumulated) {
                             noMoveTime += seconds - noMoveAccumulated
@@ -219,7 +319,7 @@ class FaceAnalyzer(
                         overlapStartTime = now
                     } else {
                         val elapsedMs = now - overlapStartTime
-                        if (elapsedMs >= 5000) {
+                        if (elapsedMs >= 10000) {
                             val seconds = (elapsedMs / 1000).toInt()
                             if (seconds > overlapTime) {
                                 overlapTime = seconds  // ✅ 항상 최신 유지시간으로 설정
@@ -240,10 +340,15 @@ class FaceAnalyzer(
                 val totalTime = (eyeDrowsyTime + noMoveTime - overlapTime).coerceAtLeast(0)
 
                 val statusText = buildString {
-                    append("상태: ${if (isClosed) "눈 감김" else "눈 뜸"}")
-                    append(" | : ${if (moved) "O" else "X"}\n")
-                    append("총 ${totalCount}회 | ${totalTime}초\n")
-                    append("범위 이탈: ${outOfRangeTotalTime}초")
+//                    append("상태: ${if (isClosed) "눈 감김" else "눈 뜸"}")
+//                    append(" | : ${if (moved) "O" else "X"}\n")
+//                    append("총 ${totalCount}회 | ${totalTime}초\n")
+//                    append("범위 이탈: ${outOfRangeTotalTime}초")
+//                    append("상태: ${if (isClosed) "눈 감김" else "눈 뜸"}")
+                    append(" | ${if (moved) "O" else "X"}\n")
+                    append("졸음 | 자세 | 이탈 \n")
+                    append("${totalCount}  |  ${postureOutCount}  |  ${outOfRangeCount}")
+//                    append("${totalTime}초 | ${postureOutTime}초 | ${outOfRangeTotalTime}초")
                 }
                 statusView.post { statusView.text = statusText }
                 imageProxy.close()
