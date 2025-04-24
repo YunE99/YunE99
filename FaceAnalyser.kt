@@ -345,10 +345,10 @@ class FaceAnalyzer(
 //                    append("총 ${totalCount}회 | ${totalTime}초\n")
 //                    append("범위 이탈: ${outOfRangeTotalTime}초")
 //                    append("상태: ${if (isClosed) "눈 감김" else "눈 뜸"}")
-                    append(" | ${if (moved) "O" else "X"}\n")
+//                    append(" | ${if (moved) "O" else "X"}\n")
                     append("졸음 | 자세 | 이탈 \n")
-                    append("${totalCount}  |  ${postureOutCount}  |  ${outOfRangeCount}")
-//                    append("${totalTime}초 | ${postureOutTime}초 | ${outOfRangeTotalTime}초")
+                    append("${totalCount}회 | ${postureOutCount} 회|  ${outOfRangeCount}회\n")
+                    append("${totalTime/60}분 | ${postureOutTime/60}분 | ${outOfRangeTotalTime/60}분")
                 }
                 statusView.post { statusView.text = statusText }
                 imageProxy.close()
