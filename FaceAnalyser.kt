@@ -17,56 +17,57 @@ import kotlin.math.sqrt
 class FaceAnalyzer(
     private val statusView: TextView,        // ◼ 상태 텍스트뷰
     private val overlayView: FaceOverlay,    // ◼ 얼굴 오버레이 출력 뷰
-    private val previewView: PreviewView     // ◼ 카메라 프리뷰 화면
+    private val previewView: PreviewView,     // ◼ 카메라 프리뷰 화면
+//    private val heartRateLabel: TextView?,
 ) : ImageAnalysis.Analyzer {
 
     // ◼ EAR 보정용 얼굴 박스 높이 이력
     private val bboxWindow = mutableListOf<Double>()
     private val bboxWindowSize = 5
 
-    // ◼ 범위 이탈 관련 상태
+    // ◼ 범위 이탈 관련 변수
     private var outOfRangeTotalTime = 0
     private var outOfRangeStart = 0L
     private var isOutOfRange = false
 
-    // ◼ 눈 감음 상태 관리
+    // ◼ 눈 감음 상태 관리 변수
     private var eyeCloseStart = 0L
     private var alreadyCounted = false
     private var eyeCloseAccumulated = 0
     private var eyeDrowsyCount = 0
     private var eyeDrowsyTime = 0
 
-    // ◼ 손목 무움직임 상태 관리
+    // ◼ 손목 무움직임 상태 관리 변수
     private var noMoveStartTime = 0L
     private var moveAlreadyCounted = false
     private var noMoveAccumulated = 0
     private var noMoveCount = 0
     private var noMoveTime = 0
 
-    // ◼ 동시 발생 상태 (눈감음+무움직임)
+    // ◼ 동시 발생 상태 (눈감음+무움직임) 변수
     private var overlapStartTime = 0L
     private var overlapActive = false
     private var overlapCount = 0
     private var overlapTime = 0
 
-    // ◼ 손목 좌표 상태
+    // ◼ 손목 좌표 상태 변수
     private val movementThreshold = 30f
     private var lastLeftWrist: PointF? = null
     private var lastRightWrist: PointF? = null
 
-    // ◼ 자세 벗어남
+    // ◼ 자세 벗어남 변수
     private var postureOutStart = 0L
     private var postureOutAccumulated = 0
     private var postureOutTime = 0
     private var postureOutCount = 0
     private var postureAlreadyCounted = false
 
-    // ◼ 범위 이탈
+    // ◼ 범위 이탈 변수
     private var outOfRangeAccumulated = 0
     private var outOfRangeCount = 0
     private var outOfRangeAlreadyCounted = false
 
-    // ◼ 얼굴 랜드마크 감지기
+    // ◼ 얼굴 랜드마크 탐지 및 초기화
     private val detector: FaceMeshDetector by lazy {
         val options = FaceMeshDetectorOptions.Builder()
             .setUseCase(FaceMeshDetectorOptions.FACE_MESH)
@@ -74,7 +75,7 @@ class FaceAnalyzer(
         FaceMeshDetection.getClient(options)
     }
 
-    // ◼ 포즈(손목) 감지기
+    // ◼ 포즈(손목) 탐지 및 초기화
     private val poseDetector: PoseDetector by lazy {
         val options = AccuratePoseDetectorOptions.Builder()
             .setDetectorMode(AccuratePoseDetectorOptions.STREAM_MODE)
@@ -89,13 +90,14 @@ class FaceAnalyzer(
             return
         }
         val inputImage = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
+        // ◼ 현재시간
         val now = System.currentTimeMillis()
 
         detector.process(inputImage)
             .addOnSuccessListener { meshes ->
                 val now = System.currentTimeMillis()
 
-                // ✅ 얼굴 감지 실패 상태 → 범위 이탈 처리
+                // 얼굴 감지 실패 상태 → 범위 밖
                 if (meshes.isEmpty()) {
                     if (!isOutOfRange) {
                         outOfRangeStart = now
@@ -108,7 +110,7 @@ class FaceAnalyzer(
                     val elapsedMs = now - outOfRangeStart
                     val duration2 = (elapsedMs / 1000).toInt()
 
-                    if (elapsedMs >= 10000) {
+                    if (elapsedMs >= 10000) { // 자리 이탈 대기시간
                         val seconds = duration2
                         if (seconds  > outOfRangeAccumulated) {
                             outOfRangeTotalTime += seconds  - outOfRangeAccumulated
@@ -128,16 +130,16 @@ class FaceAnalyzer(
                     return@addOnSuccessListener
                 }
 
-                // ✅ 얼굴 감지 복귀 → 이탈 종료 및 초기화
+                // ◼ 범위 복귀 초기화
                 if (isOutOfRange) {
                     val elapsedMs = now - outOfRangeStart
-                    if (elapsedMs >= 10000) {
+                    if (elapsedMs >= 10000) { // 범위 이탈 대기시간
                         val seconds = (elapsedMs / 1000).toInt()
                         if (seconds > outOfRangeAccumulated) {
                             outOfRangeTotalTime += seconds - outOfRangeAccumulated
                         }
                     }
-                    // 무조건 초기화는 유지
+
                     outOfRangeStart = 0L
                     isOutOfRange = false
                     outOfRangeAccumulated = 0
@@ -181,14 +183,23 @@ class FaceAnalyzer(
         val viewPoints = allPoints.map { translateToViewCoordinates(it, imageProxy, previewView) }
         overlayView.post { overlayView.setAllPoints(viewPoints) }
 
+//        val score = calculateFocusScore()
+//        heartRateLabel?.post {
+//            heartRateLabel?.text = "${"%.f".format(score)}"
+//        }
+
         // ◼ 자세 벗어남 판단
-        val faceBoxHeight = getSmoothedBoxHeight(mesh.boundingBox.height().toDouble())
+        val scaledHeight = getScaledBoxHeight(mesh.boundingBox.height().toFloat(), imageProxy, previewView)
+        val faceBoxHeight = getSmoothedBoxHeight(scaledHeight)
         val isOutside = viewPoints.any {
+            val safeGuideRadius = overlayView.getGuideRadius() * 0.95f // 95%만 허용
             val dx = it.x - overlayView.getGuideCenter().x
             val dy = it.y - overlayView.getGuideCenter().y
-            sqrt(dx * dx + dy * dy) > overlayView.getGuideRadius()
+            sqrt(dx * dx + dy * dy) > safeGuideRadius
         }
-        if (!isOutOfRange && (faceBoxHeight < 170.0 || isOutside)) {
+        val dynamicThreshold = overlayView.getGuideRadius() * 0.4f // 80%로 설정
+
+        if (!isOutOfRange && (faceBoxHeight < dynamicThreshold || isOutside)) {
             eyeCloseStart = 0L
             eyeCloseAccumulated = 0
             alreadyCounted = false
@@ -204,7 +215,7 @@ class FaceAnalyzer(
             val elapsedMs = now - postureOutStart
             val duration3 = (elapsedMs / 1000).toInt()
 
-            if (elapsedMs >= 10000) {
+            if (elapsedMs >= 10000) { // 10초 이상일때
                 val seconds = duration3
                 if (seconds > postureOutAccumulated) {
                     postureOutTime += seconds - postureOutAccumulated
@@ -245,9 +256,9 @@ class FaceAnalyzer(
                 val lwConf = left?.inFrameLikelihood ?: 0f
                 val rwConf = right?.inFrameLikelihood ?: 0f
 
-                val moveL = if (lw != null && lwConf >= 0.7f && lastLeftWrist != null)
+                val moveL = if (lw != null && lwConf >= 0.85f && lastLeftWrist != null)
                     distance(lastLeftWrist!!, PointF(lw.x, lw.y)) > movementThreshold else false
-                val moveR = if (rw != null && rwConf >= 0.7f && lastRightWrist != null)
+                val moveR = if (rw != null && rwConf >= 0.85f && lastRightWrist != null)
                     distance(lastRightWrist!!, PointF(rw.x, rw.y)) > movementThreshold else false
                 val moved = moveL || moveR
 
@@ -279,7 +290,7 @@ class FaceAnalyzer(
                     if (elapsedMs >= 10000) {
                         val seconds = (elapsedMs / 1000).toInt()
                         if (seconds > eyeCloseAccumulated) {
-                            eyeDrowsyTime += seconds - eyeCloseAccumulated  // ✅ 누적 증가분만 더함
+                            eyeDrowsyTime += seconds - eyeCloseAccumulated
                             eyeCloseAccumulated = seconds
                         }
                         if (!alreadyCounted) {
@@ -297,7 +308,7 @@ class FaceAnalyzer(
                 if (!moved) {
                     if (noMoveStartTime == 0L) noMoveStartTime = now
                     val elapsedMs = now - noMoveStartTime
-                    if (elapsedMs >= 10000) {
+                    if (elapsedMs >= 10000) { // 10초 이상일때
                         val seconds = (elapsedMs / 1000).toInt()
                         if (seconds > noMoveAccumulated) {
                             noMoveTime += seconds - noMoveAccumulated
@@ -360,12 +371,14 @@ class FaceAnalyzer(
             }
     }
 
+    // ◼ FaceMesh 포인트 추출
     private fun getMeshPoints(mesh: FaceMesh, indexes: List<Int>): List<PointF> {
         return indexes.mapNotNull { idx ->
             mesh.allPoints.getOrNull(idx)?.position?.let { PointF(it.x, it.y) }
         }
     }
 
+    // ◼ EAR 보정 계산
     private fun computeEAR(points: List<PointF>): Double {
         if (points.size < 6) return 1.0
         val vertical = (distance(points[1], points[5]) + distance(points[2], points[4])) / 2
@@ -373,10 +386,12 @@ class FaceAnalyzer(
         return if (horizontal != 0f) (vertical / horizontal).toDouble() else 1.0
     }
 
+    // ◼ 거리 계산
     private fun distance(p1: PointF, p2: PointF): Float {
         return hypot(p1.x - p2.x, p1.y - p2.y)
     }
 
+    // ◼ 카운트 변수 초기화
     private fun resetCounters() {
         eyeCloseStart = 0L
         alreadyCounted = false
@@ -387,6 +402,16 @@ class FaceAnalyzer(
         overlapStartTime = 0L
         overlapActive = false
     }
+
+//    fun calculateFocusScore(): Double {
+//        val sleepScore = 100 - (eyeDrowsyTime * 0.8 + eyeDrowsyCount * 5)
+//        val postureScore = 100 - (postureOutTime * 0.5 + postureOutCount * 3)
+//        val rangeScore = 100 - (outOfRangeTotalTime * 0.3 + outOfRangeCount * 2)
+//
+//        val final = (sleepScore * 0.5 + postureScore * 0.3 + rangeScore * 0.2)
+//        return final.coerceIn(0.0, 100.0)
+//    }
+
 
     private fun getSmoothedBoxHeight(newHeight: Double): Double {
         bboxWindow.add(newHeight)
@@ -411,5 +436,20 @@ class FaceAnalyzer(
         val dx = (viewWidth - imageWidth * scale) / 2f
         val dy = (viewHeight - imageHeight * scale) / 2f
         return PointF(point.x * scale + dx + offsetX, point.y * scale + dy + offsetY)
+    }
+
+    private fun getScaledBoxHeight(
+        rawHeight: Float,
+        imageProxy: ImageProxy,
+        previewView: PreviewView
+    ): Double {
+        val rotation = imageProxy.imageInfo.rotationDegrees
+        val isRotated = rotation == 90 || rotation == 270
+        val imageWidth = if (isRotated) imageProxy.height else imageProxy.width
+        val imageHeight = if (isRotated) imageProxy.width else imageProxy.height
+        val viewWidth = previewView.width.toFloat()
+        val viewHeight = previewView.height.toFloat()
+        val scale = minOf(viewWidth / imageWidth, viewHeight / imageHeight)
+        return (rawHeight * scale).toDouble()
     }
 }
