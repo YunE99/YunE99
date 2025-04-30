@@ -18,7 +18,7 @@ class FaceAnalyzer(
     private val statusView: TextView,        // ◼ 상태 텍스트뷰
     private val overlayView: FaceOverlay,    // ◼ 얼굴 오버레이 출력 뷰
     private val previewView: PreviewView,     // ◼ 카메라 프리뷰 화면
-//    private val heartRateLabel: TextView?,
+    private val heartRateLabel: TextView?,
 ) : ImageAnalysis.Analyzer {
 
     // ◼ EAR 보정용 얼굴 박스 높이 이력
@@ -110,7 +110,7 @@ class FaceAnalyzer(
                     val elapsedMs = now - outOfRangeStart
                     val duration2 = (elapsedMs / 1000).toInt()
 
-                    if (elapsedMs >= 10000) { // 자리 이탈 대기시간
+                    if (elapsedMs >= 5000) { // 자리 이탈 대기시간
                         val seconds = duration2
                         if (seconds  > outOfRangeAccumulated) {
                             outOfRangeTotalTime += seconds  - outOfRangeAccumulated
@@ -146,23 +146,6 @@ class FaceAnalyzer(
                     outOfRangeAlreadyCounted = false
                 }
 
-//                if (meshes.isEmpty()) {
-//                    if (!isOutOfRange) {
-//                        outOfRangeStart = now
-//                        isOutOfRange = true
-//                        resetCounters()
-//                    }
-//
-//                    val elapsedMs = now - outOfRangeStart
-//                    val duration2 = (elapsedMs / 1000).toInt()
-//
-//                    statusView.post {
-//                        statusView.text = "범위 밖 (감지 실패)\n경과: ${duration2}초"
-//                    }
-//
-//                    imageProxy.close()
-//                    return@addOnSuccessListener
-//                }
                 runFullAnalysis(inputImage, meshes, now, imageProxy)
             }
             .addOnFailureListener {
@@ -183,10 +166,20 @@ class FaceAnalyzer(
         val viewPoints = allPoints.map { translateToViewCoordinates(it, imageProxy, previewView) }
         overlayView.post { overlayView.setAllPoints(viewPoints) }
 
-//        val score = calculateFocusScore()
-//        heartRateLabel?.post {
-//            heartRateLabel?.text = "${"%.f".format(score)}"
-//        }
+        val FinalScore = FinalScore()
+        val FinalScoreByCountRate = FinalScoreByCountRate()
+        val StateScore = when{
+            FinalScoreByCountRate >= 95 -> "완벽"
+            FinalScoreByCountRate >= 90 -> "우수"
+            FinalScoreByCountRate >= 85 -> "보통"
+            FinalScoreByCountRate >= 80 -> "주의"
+            FinalScoreByCountRate >= 75 -> "산만"
+            else -> "위험"
+        }
+        heartRateLabel?.post {
+            heartRateLabel.text = "%.0f | %s".format((FinalScore + FinalScoreByCountRate)/2, StateScore)
+
+        }
 
         // ◼ 자세 벗어남 판단
         val scaledHeight = getScaledBoxHeight(mesh.boundingBox.height().toFloat(), imageProxy, previewView)
@@ -287,7 +280,7 @@ class FaceAnalyzer(
                 if (isClosed) {
                     if (eyeCloseStart == 0L) eyeCloseStart = now
                     val elapsedMs = now - eyeCloseStart
-                    if (elapsedMs >= 10000) {
+                    if (elapsedMs >= 5000) {
                         val seconds = (elapsedMs / 1000).toInt()
                         if (seconds > eyeCloseAccumulated) {
                             eyeDrowsyTime += seconds - eyeCloseAccumulated
@@ -308,7 +301,7 @@ class FaceAnalyzer(
                 if (!moved) {
                     if (noMoveStartTime == 0L) noMoveStartTime = now
                     val elapsedMs = now - noMoveStartTime
-                    if (elapsedMs >= 10000) { // 10초 이상일때
+                    if (elapsedMs >= 60000) { // 60초 이상일때
                         val seconds = (elapsedMs / 1000).toInt()
                         if (seconds > noMoveAccumulated) {
                             noMoveTime += seconds - noMoveAccumulated
@@ -332,7 +325,7 @@ class FaceAnalyzer(
                         overlapStartTime = now
                     } else {
                         val elapsedMs = now - overlapStartTime
-                        if (elapsedMs >= 10000) {
+                        if (elapsedMs >= 60000) { // 5초 이상 상태 겹침
                             val seconds = (elapsedMs / 1000).toInt()
                             if (seconds > overlapTime) {
                                 overlapTime = seconds  // ✅ 항상 최신 유지시간으로 설정
@@ -403,14 +396,28 @@ class FaceAnalyzer(
         overlapActive = false
     }
 
-//    fun calculateFocusScore(): Double {
-//        val sleepScore = 100 - (eyeDrowsyTime * 0.8 + eyeDrowsyCount * 5)
-//        val postureScore = 100 - (postureOutTime * 0.5 + postureOutCount * 3)
-//        val rangeScore = 100 - (outOfRangeTotalTime * 0.3 + outOfRangeCount * 2)
-//
-//        val final = (sleepScore * 0.5 + postureScore * 0.3 + rangeScore * 0.2)
-//        return final.coerceIn(0.0, 100.0)
-//    }
+    private fun FinalScore(): Double {
+        val eyeScore = if (eyeDrowsyCount > 0) eyeDrowsyTime.toDouble() / (eyeDrowsyCount * 5) else 0.0
+        val moveScore = if (noMoveCount > 0) noMoveTime.toDouble() / (noMoveCount * 30) else 0.0
+        val overlapScore = if (overlapCount > 0) overlapTime.toDouble() / (overlapCount * 5) else 0.0
+        val postureScore = if (postureOutCount > 0) postureOutTime.toDouble() / (postureOutCount * 5) else 0.0
+        val outOfRangeScore = if (outOfRangeCount > 0) outOfRangeTotalTime.toDouble() / (outOfRangeCount * 5) else 0.0
+
+        val totalScore = 100.0 - ((eyeScore + moveScore - overlapScore + postureScore + outOfRangeScore) / 4.0)
+        return totalScore.coerceIn(0.0, 100.0)
+    }
+
+    private fun FinalScoreByCountRate(): Double {
+        val eyeScore = if (eyeDrowsyTime > 0) (eyeDrowsyCount * 10.0) / eyeDrowsyTime/30 else 0.0
+        val moveScore = if (noMoveTime > 0) (noMoveCount * 60.0) / noMoveTime/180 else 0.0
+        val overlapScore = if (overlapTime > 0) (overlapCount * 10.0) / overlapTime/30 else 0.0
+        val postureScore = if (postureOutTime > 0) (postureOutCount * 10.0) / postureOutTime/30 else 0.0
+        val outOfRangeScore = if (outOfRangeTotalTime > 0) (outOfRangeCount * 10.0) / outOfRangeTotalTime/30 else 0.0
+
+        val totalScore = 100.0 - (eyeDrowsyCount + noMoveCount - overlapCount + postureOutCount + outOfRangeCount)
+        return totalScore.coerceIn(0.0, 100.0)
+    }
+
 
 
     private fun getSmoothedBoxHeight(newHeight: Double): Double {
