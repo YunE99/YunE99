@@ -55,6 +55,10 @@ class FaceAnalyzer(
     private var lastLeftWrist: PointF? = null
     private var lastRightWrist: PointF? = null
 
+    // ◼ 얼굴 좌우 각도(Yaw) 상태 저장 변수
+    private var lastYaw: Float? = null
+    private val yawDiffThreshold = 3f // ◼ 3도 이내 변화는 정지 상태로 간주
+
     // ◼ 자세 벗어남 변수
     private var postureOutStart = 0L
     private var postureOutAccumulated = 0
@@ -130,10 +134,10 @@ class FaceAnalyzer(
                     return@addOnSuccessListener
                 }
 
-                // ◼ 범위 복귀 초기화
+                // ◼ 자리 복귀 초기화
                 if (isOutOfRange) {
                     val elapsedMs = now - outOfRangeStart
-                    if (elapsedMs >= 10000) { // 범위 이탈 대기시간
+                    if (elapsedMs >= 5000) { // 자리 이탈 대기시간
                         val seconds = (elapsedMs / 1000).toInt()
                         if (seconds > outOfRangeAccumulated) {
                             outOfRangeTotalTime += seconds - outOfRangeAccumulated
@@ -253,7 +257,26 @@ class FaceAnalyzer(
                     distance(lastLeftWrist!!, PointF(lw.x, lw.y)) > movementThreshold else false
                 val moveR = if (rw != null && rwConf >= 0.85f && lastRightWrist != null)
                     distance(lastRightWrist!!, PointF(rw.x, rw.y)) > movementThreshold else false
-                val moved = moveL || moveR
+                
+                // ◼ 얼굴 yaw 추정 (얼굴 좌우 움직임 판단)
+                val moveYaw = if (mesh != null && mesh.allPoints.size > 263) {
+                    val leftEyeOuter = mesh.allPoints[33].position
+                    val rightEyeOuter = mesh.allPoints[263].position
+                    val noseCenter = mesh.allPoints[168].position
+
+                    val yawEstimate = estimateYaw(
+                        PointF(leftEyeOuter.x, leftEyeOuter.y),
+                        PointF(rightEyeOuter.x, rightEyeOuter.y),
+                        PointF(noseCenter.x, noseCenter.y)
+                    )
+                    val movedYaw = lastYaw != null && kotlin.math.abs(yawEstimate - lastYaw!!) > yawDiffThreshold
+                    lastYaw = yawEstimate
+                    movedYaw
+                } else {
+                    false // ◀︎ yaw 계산 실패한 경우 움직임으로 간주하지 않음
+                }
+
+                val moved = moveL || moveR || moveYaw
 
                 lastLeftWrist = lw?.let { PointF(it.x, it.y) }
                 lastRightWrist = rw?.let { PointF(it.x, it.y) }
@@ -383,6 +406,20 @@ class FaceAnalyzer(
     private fun distance(p1: PointF, p2: PointF): Float {
         return hypot(p1.x - p2.x, p1.y - p2.y)
     }
+
+        // ◼ 얼굴 yaw 추정 함수: 눈 중심과 코의 상대 위치로 판단
+    private fun estimateYaw(left: PointF?, right: PointF?, nose: PointF?): Float {
+        // ◼ null 또는 비정상 좌표 방어 처리
+        if (left == null || right == null || nose == null) return 0f
+        if (left.x == 0f && left.y == 0f) return 0f
+        if (right.x == 0f && right.y == 0f) return 0f
+        if (nose.x == 0f && nose.y == 0f) return 0f
+
+        // ◼ 정상 계산
+        val eyeCenterX = (left.x + right.x) / 2f
+        return nose.x - eyeCenterX
+    }
+
 
     // ◼ 카운트 변수 초기화
     private fun resetCounters() {
