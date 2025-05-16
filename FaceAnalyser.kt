@@ -12,6 +12,7 @@ import com.google.mlkit.vision.facemesh.*
 import com.google.mlkit.vision.pose.*
 import com.google.mlkit.vision.pose.accurate.AccuratePoseDetectorOptions
 import kotlin.math.hypot
+import kotlin.math.pow
 import kotlin.math.sqrt
 
 class FaceAnalyzer(
@@ -51,7 +52,7 @@ class FaceAnalyzer(
     private var overlapTime = 0
 
     // ◼ 손목 좌표 상태 변수
-    private val movementThreshold = 30f
+    private val movementThreshold = 50f
     private var lastLeftWrist: PointF? = null
     private var lastRightWrist: PointF? = null
 
@@ -70,6 +71,12 @@ class FaceAnalyzer(
     private var outOfRangeAccumulated = 0
     private var outOfRangeCount = 0
     private var outOfRangeAlreadyCounted = false
+
+    // ◼ 통합변수
+    private var F_outTimeValue = 5000 // 범위 이탈(자리 이탈) 시간 값
+    private var F_poseTimeValue = 10000 // 자세 벗어남 시간 값
+    private var F_MoveAndBothValue = 60000 // 움직임, 동시상태 시간 값
+    private var F_isCloseValue = 5000 // 눈 감음 시간 값
 
     // ◼ 얼굴 랜드마크 탐지 및 초기화
     private val detector: FaceMeshDetector by lazy {
@@ -114,7 +121,7 @@ class FaceAnalyzer(
                     val elapsedMs = now - outOfRangeStart
                     val duration2 = (elapsedMs / 1000).toInt()
 
-                    if (elapsedMs >= 5000) { // 자리 이탈 대기시간
+                    if (elapsedMs >= F_outTimeValue) { // 자리 이탈 대기시간
                         val seconds = duration2
                         if (seconds  > outOfRangeAccumulated) {
                             outOfRangeTotalTime += seconds  - outOfRangeAccumulated
@@ -134,10 +141,10 @@ class FaceAnalyzer(
                     return@addOnSuccessListener
                 }
 
-                // ◼ 자리 복귀 초기화
+                //  ◼ 범위 복귀 초기화
                 if (isOutOfRange) {
                     val elapsedMs = now - outOfRangeStart
-                    if (elapsedMs >= 5000) { // 자리 이탈 대기시간
+                    if (elapsedMs >= F_outTimeValue) { // 범위 이탈 대기시간
                         val seconds = (elapsedMs / 1000).toInt()
                         if (seconds > outOfRangeAccumulated) {
                             outOfRangeTotalTime += seconds - outOfRangeAccumulated
@@ -212,7 +219,7 @@ class FaceAnalyzer(
             val elapsedMs = now - postureOutStart
             val duration3 = (elapsedMs / 1000).toInt()
 
-            if (elapsedMs >= 10000) { // 10초 이상일때
+            if (elapsedMs >= F_poseTimeValue) { // 10초 이상일때
                 val seconds = duration3
                 if (seconds > postureOutAccumulated) {
                     postureOutTime += seconds - postureOutAccumulated
@@ -257,7 +264,7 @@ class FaceAnalyzer(
                     distance(lastLeftWrist!!, PointF(lw.x, lw.y)) > movementThreshold else false
                 val moveR = if (rw != null && rwConf >= 0.85f && lastRightWrist != null)
                     distance(lastRightWrist!!, PointF(rw.x, rw.y)) > movementThreshold else false
-                
+
                 // ◼ 얼굴 yaw 추정 (얼굴 좌우 움직임 판단)
                 val moveYaw = if (mesh != null && mesh.allPoints.size > 263) {
                     val leftEyeOuter = mesh.allPoints[33].position
@@ -288,22 +295,24 @@ class FaceAnalyzer(
                 val faceHeight = mesh.boundingBox.height().toFloat()
                 val eyeDist = distance(leftEye[0], rightEye[3])
                 val finalEAR = ((ear / faceHeight) * 100.0 + (ear / eyeDist) * 100.0) / 2.0
-
                 var threshold = (eyeDist / faceHeight) * 0.2
-                val diff = finalEAR - threshold
-                threshold += when {
-                    diff >= 0.35 -> 0.3
-                    diff >= 0.25 -> 0.2
-                    diff >= 0.15 -> 0.1
-                    else -> 0.0
-                }
-                val isClosed = finalEAR < threshold
+
+                val adjustedThreshold = threshold + (((0.1 - threshold) * 100).pow(2)) * 0.01 - 0.065
+
+//                val diff = finalEAR - threshold
+//                threshold = when {
+//                     diff >= 0.35 -> 0.3
+//                     diff >= 0.25 -> 0.2
+//                     diff >= 0.15 -> 0.1
+//                     else -> 0.0
+//                }
+                val isClosed = finalEAR < adjustedThreshold
 
                 // ◼ 눈 감음 판단
                 if (isClosed) {
                     if (eyeCloseStart == 0L) eyeCloseStart = now
                     val elapsedMs = now - eyeCloseStart
-                    if (elapsedMs >= 5000) {
+                    if (elapsedMs >= F_isCloseValue) {
                         val seconds = (elapsedMs / 1000).toInt()
                         if (seconds > eyeCloseAccumulated) {
                             eyeDrowsyTime += seconds - eyeCloseAccumulated
@@ -324,7 +333,7 @@ class FaceAnalyzer(
                 if (!moved) {
                     if (noMoveStartTime == 0L) noMoveStartTime = now
                     val elapsedMs = now - noMoveStartTime
-                    if (elapsedMs >= 60000) { // 60초 이상일때
+                    if (elapsedMs >= F_MoveAndBothValue) { // 60초 이상일때
                         val seconds = (elapsedMs / 1000).toInt()
                         if (seconds > noMoveAccumulated) {
                             noMoveTime += seconds - noMoveAccumulated
@@ -348,10 +357,10 @@ class FaceAnalyzer(
                         overlapStartTime = now
                     } else {
                         val elapsedMs = now - overlapStartTime
-                        if (elapsedMs >= 60000) { // 5초 이상 상태 겹침
+                        if (elapsedMs >= F_MoveAndBothValue) { // 안움직임 시간을 따라감
                             val seconds = (elapsedMs / 1000).toInt()
                             if (seconds > overlapTime) {
-                                overlapTime = seconds  // ✅ 항상 최신 유지시간으로 설정
+                                overlapTime = seconds  // 항상 최신 유지시간으로 설정
                             }
                             if (!overlapActive) {
                                 overlapCount++
@@ -407,7 +416,7 @@ class FaceAnalyzer(
         return hypot(p1.x - p2.x, p1.y - p2.y)
     }
 
-        // ◼ 얼굴 yaw 추정 함수: 눈 중심과 코의 상대 위치로 판단
+    // ◼ 얼굴 yaw 추정 함수: 눈 중심과 코의 상대 위치로 판단
     private fun estimateYaw(left: PointF?, right: PointF?, nose: PointF?): Float {
         // ◼ null 또는 비정상 좌표 방어 처리
         if (left == null || right == null || nose == null) return 0f
