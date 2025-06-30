@@ -136,5 +136,14 @@
   <a href="https://www.notion.so/SIYUN-s-Page-1129e8b2bade808ab4a9e81b997792dc?pvs=4">
     <img src="https://img.shields.io/badge/Notion-000000?style=flat&logo=Notion&logoColor=white">
   </a>
+  <br><br>
+
+  <div align="center">
+  <h2 style="border-bottom: 1px solid #d8dee4; color: #282d33;">🏅 Stats</h2>
+  
+  <img src="https://github-readme-stats.vercel.app/api?username=YunE99&bg_color=180,ffffff,00000000&title_color=000000&text_color=000000" />
+
+
+
 
     
