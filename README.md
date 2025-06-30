@@ -2,8 +2,13 @@
     <img src="https://capsule-render.vercel.app/api?type=waving&color=8bb4c6&height=200&text=SIYUN's_Portfolio📃&animation=&fontColor=ffffff&fontSize=50" />
     </div>
     <div align= "center"> 
-    <h2 style="border-bottom: 1px solid #d8dee4; color: #282d33;"> Intro </h2>  
-    <div style="font-weight: 700; font-size: 15px; text-align: left; color: #282d33;"> <li> 열심히 배우며 성장 중인 새싹입니다.^^ </div> 
+    <h2 style="border-bottom: 1px solid #d8dee4; color: #282d33;"> Intro </h2> 
+    </div>    
+    <div style="font-weight: 700; font-size: 15px; text-align: left; color: #282d33;"> 안녕하세요! "배움을 갈구하며 끊임없이 도전하여 저의 가치를 성장시키고 싶은" 김시윤입니다. <br> 
+       아직 개발자로서의 경력은 짧지만, 백엔드 및 AI 개발자를 목표로 꾸준히 역량을 키우고 있습니다. <br>
+        학원에서 배운 다양한 기술들과 프로젝트 경험을 통해 Java, Python, C# 등 여러 언어를 습득하며 실력을 쌓아가고 있습니다. <br>
+        요즘은 풀스택 개발자가 주목받고 있지만, 저는 특히 Python에 집중하고 있습니다.<br>
+        AI와 머신러닝 분야에서의 높은 활용도, 풍부한 라이브러리와 생태계, 다양한 적용 가능성 덕분에 Python을 중심으로 전문성을 갖춘 개발자로 성장하고자 합니다.
     </div>
     <div align= "center">
     <h2 style="border-bottom: 1px solid #d8dee4; color: #282d33;"> 🛠️ Tech Stacks </h2> <br> 
@@ -16,6 +21,15 @@
           <img src="https://img.shields.io/badge/Github-181717?style=flat&logo=Github&logoColor=white">
           </div>
     </div>
+    <div align= "center">
+    <h2 style="border-bottom: 1px solid #d8dee4; color: #282d33;"> 💻Projects</h2>
+    </div>
+    <div align= "left"> <h3>Project1 : 디지털 소외계층을 위한 SNS <a href="https://github.com/2024-SMHRD-IS-CLOUD-4/GitTestHello1021" target="_blank" style="text-decoration: none;">
+  <button style="font-size: 15px; padding: 10px 20px; border-radius: 8px; border: none; background-color: #4CAF50; color: white; cursor: pointer;">
+    [프로젝트 보기]
+  </button></h3></div>
+          <div style="font-weight: 700; font-size: 15px; text-align: left; color: #282d33;"> test
+    </div>  
     <div align= "center">
     <h2 style="border-bottom: 1px solid #d8dee4; color: #282d33;"> 🧑‍💻 Contact me </h2> <br> 
     <div align= "center"> <a href=mailto:rlatldbs0425@gmail.com> <img src="https://img.shields.io/badge/Gmail-EA4335?style=flat&logo=Gmail&logoColor=white&link=mailto:rlatldbs0425@gmail.com"> </a>
