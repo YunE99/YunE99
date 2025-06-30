@@ -111,7 +111,7 @@
         </li>
         <li>
           3. PoseDetection API, Face Mesh API를 활용한 졸음(수면) 판단 AI 모델
-          <a href="https://github.com/YunE99/YunE99/tree/KakaoLogin" target="_blank" style="text-decoration: none;">
+          <a href="https://github.com/YunE99/YunE99/tree/PoseDetect" target="_blank" style="text-decoration: none;">
             <button style="font-size: 13px; padding: 5px 15px; margin-left: 10px; border-radius: 8px; border: none; background-color: #4CAF50; color: white; cursor: pointer;">
               [코드 보기]
             </button>
