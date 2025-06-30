@@ -123,17 +123,18 @@
     <li>개발 도구 : Visual Studio Code, Android Studio</li>
   </ul>
 </div>  
-    <div align= "center">
-    <h2 style="border-bottom: 1px solid #d8dee4; color: #282d33;"> 🧑‍💻 Contact me </h2> <br> 
-    <div align= "center"> <a href=mailto:rlatldbs0425@gmail.com> <img src="https://img.shields.io/badge/Gmail-EA4335?style=flat&logo=Gmail&logoColor=white&link=mailto:rlatldbs0425@gmail.com"> </a>
-         <a href=https://www.notion.so/SIYUN-s-Page-1129e8b2bade808ab4a9e81b997792dc?pvs=4> <img src="https://img.shields.io/badge/Notion-000000?style=flat&logo=Notion&logoColor=white&link=https://www.notion.so/SIYUN-s-Page-1129e8b2bade808ab4a9e81b997792dc?pvs=4"> </a>
-          </div>  <br> 
-    <div align= "center"> <a href="https://hits.seeyoufarm.com"> <img src="https://hits.seeyoufarm.com/api/count/incr/badge.svg?url=https%3A%2F%2Fgithub.com%2FYunE99%2F&count_bg=%23000000&title_bg=%23000000&icon=github.svg&icon_color=%23FFFFFF&title=GitHub&edge_flat=false"/></a>
-       </div> 
-    </div>
-    <div align= "center"> 
-    <h2 style="border-bottom: 1px solid #d8dee4; color: #282d33;"> 🏅 Stats </h2> <div align= "center"> <img src="https://github-readme-stats.vercel.app/api?username=YunE99&bg_color=180,ffffff,00000000&title_color=000000&text_color=000000"
-         /> <img src="https://github-readme-stats.vercel.app/api/top-langs/?username=YunE99&layout=compact&bg_color=180,ffffff,00000000&title_color=000000&text_color=000000"
-           /> </div> 
-    </div>
+<!-- 📬 Contact Me Section -->
+<div align="center">
+  <h2 style="border-bottom: 1px solid #d8dee4; color: #282d33;">🧑‍💻 Contact me</h2>
+  <br>
+  
+  <!-- 이메일 & 노션 -->
+  <a href="mailto:rlatldbs0425@gmail.com">
+    <img src="https://img.shields.io/badge/Gmail-EA4335?style=flat&logo=Gmail&logoColor=white">
+  </a>
+
+  <a href="https://www.notion.so/SIYUN-s-Page-1129e8b2bade808ab4a9e81b997792dc?pvs=4">
+    <img src="https://img.shields.io/badge/Notion-000000?style=flat&logo=Notion&logoColor=white">
+  </a>
+
     
