@@ -21,47 +21,108 @@
           <img src="https://img.shields.io/badge/Github-181717?style=flat&logo=Github&logoColor=white">
           </div>
     </div>
-    <div align= "center">
-    <h2 style="border-bottom: 1px solid #d8dee4; color: #282d33;"> 💻Projects</h2>
-    </div>
-    <div align= "left"> <h3>Project1 : 디지털 소외계층을 위한 SNS <a href="https://github.com/2024-SMHRD-IS-CLOUD-4/GitTestHello1021" target="_blank" style="text-decoration: none;">
-  <button style="font-size: 15px; padding: 10px 20px; border-radius: 8px; border: none; background-color: #4CAF50; color: white; cursor: pointer;">
-    [프로젝트 보기]
-  </button></h3></div>
-          <div style="font-weight: 700; font-size: 15px; text-align: left; color: #282d33;">
-              <li>프로젝트 기간 : ~ 2024-11-12</li>
-              <li>핵심 역할 : 팀원(백앤드) <br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                  1. 백앤드 구성 및 깃 허브 관리 <br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                  2. Flask를 사용한 허깅페이스 API 연동</li>
-              <li>사용 언어 : JAVA, JavaScript, Python</li>
-              <li>개발 도구 : Visual Studio Code, 이클립스</li>
-    </div>
-    <br><br>
-        <div align= "left"> <h3>Project2 : YOLOv11m 기반 애플 망고 병해충 판별 및 관리 플랫폼 <a href="https://github.com/2024-SMHRD-IS-CLOUD-4/PENTANOVA" target="_blank" style="text-decoration: none;">
-  <button style="font-size: 15px; padding: 10px 20px; border-radius: 8px; border: none; background-color: #4CAF50; color: white; cursor: pointer;">
-    [프로젝트 보기]
-  </button></h3></div>
-          <div style="font-weight: 700; font-size: 15px; text-align: left; color: #282d33;">
-              <li>프로젝트 기간 : 2025.01.21 ~ 2025.02.13</li>
-              <li>핵심 역할 : 팀장 <br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                  1. WBS 및 깃 허브관리 <br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                  2. KaKao 알림 API, Fast API 연동</li>
-              <li>사용 언어 : Python</li>
-              <li>개발 도구 : Visual Studio Code</li>
-    </div>
-    <br><br>
-        <div align= "left"> <h3>Project3 : 자기주도 학습 플랫폼 <a href="https://github.com/2024-SMHRD-IS-CLOUD-4/PENTANOVA" target="_blank" style="text-decoration: none;">
-  <button style="font-size: 15px; padding: 10px 20px; border-radius: 8px; border: none; background-color: #4CAF50; color: white; cursor: pointer;">
-    [프로젝트 보기]
-  </button></h3></div>
-          <div style="font-weight: 700; font-size: 15px; text-align: left; color: #282d33;">
-              <li>프로젝트 기간 : 2025.03 ~ 3</li>
-              <li>핵심 역할 : 팀원(AI모델 개발 및 보조) <br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                  1. WBS 및 깃 허브관리 <br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                  2. KaKao 알림 API, Fast API 연동</li>
-              <li>사용 언어 : Python</li>
-              <li>개발 도구 : Visual Studio Code</li>
-    </div>  
+<div align="center">
+  <h2 style="border-bottom: 1px solid #d8dee4; color: #282d33;"> 💻Projects</h2>
+</div>
+
+<!-- Project 1 -->
+<div align="left">
+  <h3>Project1 : 디지털 소외계층을 위한 SNS</h3>
+</div>
+<div style="font-weight: 700; font-size: 15px; text-align: left; color: #282d33;">
+  <ul>
+    <li>프로젝트 기간 : ~ 2024-11-12</li>
+    <li>
+      핵심 역할 : 팀원 (백엔드)
+      <ul>
+        <li>1. 백엔드 구성 및 GitHub 관리</li>
+        <li>2. Flask를 사용한 허깅페이스 API 연동</li>
+      </ul>
+    </li>
+    <li>사용 언어 : Java, JavaScript, Python</li>
+    <li>개발 도구 : Visual Studio Code, 이클립스</li>
+    <li>
+      프로젝트 링크 :
+      <a href="https://github.com/2024-SMHRD-IS-CLOUD-4/GitTestHello1021" target="_blank" style="text-decoration: none;">
+        <button style="font-size: 13px; padding: 5px 15px; margin-left: 5px; border-radius: 8px; border: none; background-color: #4CAF50; color: white; cursor: pointer;">
+          [프로젝트 보기]
+        </button>
+      </a>
+    </li>
+  </ul>
+</div>
+
+<br><br>
+
+<!-- Project 2 -->
+<div align="left">
+  <h3>Project2 : YOLOv11m 기반 애플 망고 병해충 판별 및 관리 플랫폼</h3>
+</div>
+<div style="font-weight: 700; font-size: 15px; text-align: left; color: #282d33;">
+  <ul>
+    <li>프로젝트 기간 : 2025.01.21 ~ 2025.02.13</li>
+    <li>
+      핵심 역할 : 팀장
+      <ul>
+        <li>1. WBS 및 GitHub 관리</li>
+        <li>2. Kakao 알림 API, FastAPI 연동</li>
+      </ul>
+    </li>
+    <li>사용 언어 : Python</li>
+    <li>개발 도구 : Visual Studio Code</li>
+    <li>
+      프로젝트 링크 :
+      <a href="https://github.com/2024-SMHRD-IS-CLOUD-4/PENTANOVA" target="_blank" style="text-decoration: none;">
+        <button style="font-size: 13px; padding: 5px 15px; margin-left: 5px; border-radius: 8px; border: none; background-color: #4CAF50; color: white; cursor: pointer;">
+          [프로젝트 보기]
+        </button>
+      </a>
+    </li>
+  </ul>
+</div>
+
+<br><br>
+
+<!-- Project 3 -->
+<div align="left">
+  <h3>Project3 : 자기주도 학습 플랫폼</h3>
+</div>
+<div style="font-weight: 700; font-size: 15px; text-align: left; color: #282d33;">
+  <ul>
+    <li>프로젝트 기간 : 2025.03 ~</li>
+    <li>
+      핵심 역할 : 팀원 (AI 모델 개발 및 서브)
+      <ul>
+        <li>
+          1. 서버 C# 코드 → Python 코드로 변경
+          <a href="https://github.com/YunE99/YunE99/tree/Change_C%23_to_Python" target="_blank" style="text-decoration: none;">
+            <button style="font-size: 13px; padding: 5px 15px; margin-left: 10px; border-radius: 8px; border: none; background-color: #4CAF50; color: white; cursor: pointer;">
+              [코드 보기]
+            </button>
+          </a>
+        </li>
+        <li>
+          2. 카카오 로그인 API를 통한 로그인 기능
+          <a href="https://github.com/YunE99/YunE99/tree/KakaoLogin" target="_blank" style="text-decoration: none;">
+            <button style="font-size: 13px; padding: 5px 15px; margin-left: 10px; border-radius: 8px; border: none; background-color: #4CAF50; color: white; cursor: pointer;">
+              [코드 보기]
+            </button>
+          </a>
+        </li>
+        <li>
+          3. PoseDetection API, Face Mesh API를 활용한 졸음(수면) 판단 AI 모델
+          <a href="https://github.com/YunE99/YunE99/tree/KakaoLogin" target="_blank" style="text-decoration: none;">
+            <button style="font-size: 13px; padding: 5px 15px; margin-left: 10px; border-radius: 8px; border: none; background-color: #4CAF50; color: white; cursor: pointer;">
+              [코드 보기]
+            </button>
+          </a>
+        </li>
+      </ul>
+    </li>
+    <li>사용 언어 : Python, C#, Kotlin</li>
+    <li>개발 도구 : Visual Studio Code, Android Studio</li>
+  </ul>
+</div>  
     <div align= "center">
     <h2 style="border-bottom: 1px solid #d8dee4; color: #282d33;"> 🧑‍💻 Contact me </h2> <br> 
     <div align= "center"> <a href=mailto:rlatldbs0425@gmail.com> <img src="https://img.shields.io/badge/Gmail-EA4335?style=flat&logo=Gmail&logoColor=white&link=mailto:rlatldbs0425@gmail.com"> </a>
